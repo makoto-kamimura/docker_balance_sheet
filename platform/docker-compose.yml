@@ -1,0 +1,123 @@
+# ─────────────────────────────────────────────────────
+# 本番兼用メイン定義（platform/ から実行）
+# build context はプロジェクトルート（..）。
+# Dockerfile は platform/Dockerfile, app ソースは ../app/ 配下。
+# ─────────────────────────────────────────────────────
+
+services:
+  # ─── Nginx ─────────────────────────────────────────
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: bs_nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./default.conf:/etc/nginx/conf.d/default.conf:ro
+      - laravel_app:/var/www/html:ro
+      - frontend_dist:/var/www/frontend:ro
+    depends_on:
+      - php
+      - frontend
+    networks:
+      - bs_net
+    restart: unless-stopped
+
+  # ─── PHP-FPM (Laravel) ─────────────────────────────
+  php:
+    build:
+      context: ..
+      dockerfile: platform/Dockerfile
+    container_name: bs_php
+    volumes:
+      - laravel_app:/var/www/html
+      - ./php.ini:/usr/local/etc/php/conf.d/custom.ini:ro
+    environment:
+      APP_ENV:  ${APP_ENV:-local}
+      APP_KEY:  ${APP_KEY}
+      APP_URL:  ${APP_URL:-http://localhost}
+      DB_HOST:     mysql
+      DB_PORT:     3306
+      DB_DATABASE: ${DB_DATABASE:-balance_sheet}
+      DB_USERNAME: ${DB_USERNAME:-bs_user}
+      DB_PASSWORD: ${DB_PASSWORD:-secret}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - bs_net
+    restart: unless-stopped
+
+  # ─── React (Vite ビルド → Nginx で配信) ────────────
+  frontend:
+    build:
+      context: ..
+      dockerfile: platform/Dockerfile.frontend
+    container_name: bs_frontend
+    volumes:
+      - frontend_dist:/app/dist
+    environment:
+      VITE_API_URL: ${APP_URL:-http://localhost}/api
+    networks:
+      - bs_net
+
+  # ─── MySQL 8 ───────────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    container_name: bs_mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootsecret}
+      MYSQL_DATABASE:      ${DB_DATABASE:-balance_sheet}
+      MYSQL_USER:          ${DB_USERNAME:-bs_user}
+      MYSQL_PASSWORD:      ${DB_PASSWORD:-secret}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./my.cnf:/etc/mysql/conf.d/custom.cnf:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-rootsecret}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bs_net
+    restart: unless-stopped
+
+  # ─── Laravel 初期化（migrate + seed）──────────────
+  artisan:
+    build:
+      context: ..
+      dockerfile: platform/Dockerfile
+    container_name: bs_artisan
+    volumes:
+      - laravel_app:/var/www/html
+    environment:
+      APP_ENV:     ${APP_ENV:-local}
+      APP_KEY:     ${APP_KEY}
+      DB_HOST:     mysql
+      DB_DATABASE: ${DB_DATABASE:-balance_sheet}
+      DB_USERNAME: ${DB_USERNAME:-bs_user}
+      DB_PASSWORD: ${DB_PASSWORD:-secret}
+    command: >
+      sh -c "
+        cd /var/www/html &&
+        php artisan migrate --force &&
+        php artisan db:seed --force
+      "
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - bs_net
+    profiles: ["init"]   # docker compose --profile init up artisan で実行
+
+# ─── ボリューム ──────────────────────────────────────
+volumes:
+  laravel_app:
+  frontend_dist:
+  mysql_data:
+
+# ─── ネットワーク ─────────────────────────────────────
+networks:
+  bs_net:
+    driver: bridge

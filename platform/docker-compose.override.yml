@@ -1,0 +1,42 @@
+# ─────────────────────────────────────────────────────
+# ローカル開発用オーバーライド（自動適用）
+# 本番モードでは: docker compose -f docker-compose.yml ... を使用
+# ─────────────────────────────────────────────────────
+# 現リポジトリは Laravel プロジェクト本体を含まないため、
+# php サービスはイメージに焼き込まれた Laravel スケルトンをそのまま利用する
+# （docker-compose.yml の laravel_app ボリューム経由）。
+# vite サービスは ../app/frontend を直接マウントして HMR を有効化する。
+# ─────────────────────────────────────────────────────
+
+services:
+  # 開発時: Vite 開発サーバー（HMR対応）
+  vite:
+    build:
+      context: ..
+      dockerfile: platform/Dockerfile.frontend.dev
+    container_name: bs_vite
+    ports:
+      - "5173:5173"
+    volumes:
+      - ../app/frontend:/app
+      - /app/node_modules
+    environment:
+      VITE_API_URL: http://localhost/api
+    command: npm run dev -- --host 0.0.0.0
+    networks:
+      - bs_net
+
+  # 開発時: phpMyAdmin
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: bs_phpmyadmin
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: ${DB_USERNAME:-bs_user}
+      PMA_PASSWORD: ${DB_PASSWORD:-secret}
+    depends_on:
+      - mysql
+    networks:
+      - bs_net

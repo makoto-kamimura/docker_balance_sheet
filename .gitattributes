@@ -1,2 +1,55 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+# ─────────────────────────────────────────────────────
+# 行末コード正規化（クロスプラットフォーム対応）
+# Windows の core.autocrlf=true でも Docker ビルドが壊れないよう
+# シェル/Dockerfile/設定ファイル/ソースは LF を強制する。
+# ─────────────────────────────────────────────────────
+
+# 既定: テキストとして扱い、checkout 時に LF へ正規化
+* text=auto eol=lf
+
+# ─── Docker / シェル / 設定 (LF 必須) ──────────────────
+*.sh           text eol=lf
+Dockerfile     text eol=lf
+Dockerfile.*   text eol=lf
+*.yml          text eol=lf
+*.yaml         text eol=lf
+*.conf         text eol=lf
+*.ini          text eol=lf
+*.cnf          text eol=lf
+Makefile       text eol=lf
+.env           text eol=lf
+.env.*         text eol=lf
+
+# ─── ソースコード (LF) ─────────────────────────────────
+*.php          text eol=lf
+*.ts           text eol=lf
+*.tsx          text eol=lf
+*.js           text eol=lf
+*.jsx          text eol=lf
+*.mjs          text eol=lf
+*.cjs          text eol=lf
+*.json         text eol=lf
+*.html         text eol=lf
+*.css          text eol=lf
+*.md           text eol=lf
+
+# ─── Windows 専用スクリプト (CRLF) ─────────────────────
+*.bat          text eol=crlf
+*.cmd          text eol=crlf
+*.ps1          text eol=crlf
+
+# ─── バイナリ ──────────────────────────────────────────
+*.png          binary
+*.jpg          binary
+*.jpeg         binary
+*.gif          binary
+*.ico          binary
+*.webp         binary
+*.woff         binary
+*.woff2        binary
+*.ttf          binary
+*.eot          binary
+*.pdf          binary
+*.zip          binary
+*.tar          binary
+*.gz           binary

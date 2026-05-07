@@ -1,0 +1,33 @@
+# ─────────────────────────────────────────────────────
+# Build context: プロジェクトルート（platform/docker-compose.yml で context: ..）
+# app/frontend/ 配下を参照する。
+# ─────────────────────────────────────────────────────
+
+# ─────────────────────────────────────────────────────
+# Stage 1: React 本番ビルド
+# ─────────────────────────────────────────────────────
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+COPY app/frontend/package.json app/frontend/package-lock.json* ./
+RUN npm install --no-audit --no-fund
+
+COPY app/frontend/ ./
+
+ARG VITE_API_URL=/api
+ENV VITE_API_URL=$VITE_API_URL
+
+RUN npm run build
+
+# ─────────────────────────────────────────────────────
+# Stage 2: ビルド成果物のみを軽量イメージに格納
+# ─────────────────────────────────────────────────────
+FROM alpine:3.19 AS app
+
+WORKDIR /app
+
+COPY --from=builder /app/dist ./dist
+
+# Nginx から共有ボリューム経由で配信されるため、コンテナ単体では何もしない
+CMD ["sh", "-c", "echo 'frontend build artifact ready' && tail -f /dev/null"]

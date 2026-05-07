@@ -1,0 +1,67 @@
+# ─── 依存関係 ────────────────────────────────────────
+node_modules/
+vendor/
+
+# ─── ビルド成果物 ────────────────────────────────────
+dist/
+build/
+.parcel-cache/
+.vite/
+storage/framework/cache/
+storage/framework/sessions/
+storage/framework/views/
+storage/logs/
+bootstrap/cache/*.php
+
+# ─── 環境変数（個別環境の秘匿情報） ───────────────────
+.env
+.env.local
+.env.*.local
+.env.backup
+*.env.bak
+
+# ─── Composer / NPM ──────────────────────────────────
+composer.phar
+
+# ─── IDE / エディタ ──────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-workspace
+
+# ─── OS 固有ファイル ─────────────────────────────────
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+.directory
+.Trash-*
+
+# ─── ログ ────────────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ─── テスト・カバレッジ ──────────────────────────────
+coverage/
+.nyc_output/
+.phpunit.result.cache
+
+# ─── Docker ──────────────────────────────────────────
+.docker-data/
+
+# ─── work ──────────────────────────────────────────
+*.bk

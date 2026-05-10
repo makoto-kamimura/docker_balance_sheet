@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "家計バランスシート",
+    "slug": "balance-sheet",
+    "scheme": "balancesheet",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0f172a"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "plugins": [
+      [
+        "expo-camera",
+        { "cameraPermission": "レシート撮影のためにカメラを使用します。" }
+      ]
+    ],
+    "ios": {
+      "bundleIdentifier": "com.example.balancesheet",
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "レシート撮影のためにカメラを使用します。"
+      }
+    },
+    "android": {
+      "package": "com.example.balancesheet",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0f172a"
+      },
+      "permissions": ["android.permission.CAMERA"]
+    },
+    "extra": {
+      "apiUrl": "http://localhost/api"
+    }
+  }
+}

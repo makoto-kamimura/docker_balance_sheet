@@ -1,0 +1,138 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ─────────────────────────────────────────────
+  # Backend: Laravel + PHPUnit
+  # backend は app/backend/ にユーザー作成ファイルだけ置く構成のため、
+  # Laravel スケルトンを毎回 composer create-project で生成して、
+  # platform/setup-laravel.mjs でソースを上書きしてからテストを走らせる。
+  # ─────────────────────────────────────────────
+  backend:
+    name: Backend (PHPUnit)
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: balance_sheet_test
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=5s
+          --health-timeout=2s
+          --health-retries=10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo_mysql, intl, bcmath, gd
+          coverage: none
+
+      - name: Setup Node (for setup-laravel.mjs)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Create Laravel skeleton
+        working-directory: ${{ runner.temp }}
+        run: composer create-project laravel/laravel skeleton --prefer-dist --no-interaction
+
+      - name: Inject backend sources via setup-laravel.mjs
+        run: node platform/setup-laravel.mjs ${{ runner.temp }}/skeleton
+
+      - name: Install PDF dep
+        working-directory: ${{ runner.temp }}/skeleton
+        run: composer require barryvdh/laravel-dompdf:^3.0 --no-interaction
+
+      - name: Configure .env for tests
+        working-directory: ${{ runner.temp }}/skeleton
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          {
+            echo "DB_CONNECTION=mysql"
+            echo "DB_HOST=127.0.0.1"
+            echo "DB_PORT=3306"
+            echo "DB_DATABASE=balance_sheet_test"
+            echo "DB_USERNAME=root"
+            echo "DB_PASSWORD=root"
+            echo "MAIL_MAILER=array"
+          } >> .env
+
+      - name: Run migrations
+        working-directory: ${{ runner.temp }}/skeleton
+        run: php artisan migrate --force
+
+      - name: Run PHPUnit
+        working-directory: ${{ runner.temp }}/skeleton
+        run: php artisan test --testsuite=Feature,Unit
+
+  # ─────────────────────────────────────────────
+  # Frontend: Vite + Vitest + tsc
+  # ─────────────────────────────────────────────
+  frontend:
+    name: Frontend (tsc + Vitest)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: app/frontend/package-lock.json
+
+      - name: Install
+        working-directory: app/frontend
+        run: npm ci || npm install
+
+      - name: Type check
+        working-directory: app/frontend
+        run: npm run lint
+
+      - name: Test
+        working-directory: app/frontend
+        run: npm test
+
+      - name: Build
+        working-directory: app/frontend
+        run: npm run build
+
+  # ─────────────────────────────────────────────
+  # Mobile: tsc のみ (EAS Build は手動)
+  # ─────────────────────────────────────────────
+  mobile:
+    name: Mobile (tsc)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: app/mobile/package-lock.json
+
+      - name: Install
+        working-directory: app/mobile
+        run: npm ci || npm install
+
+      - name: Type check
+        working-directory: app/mobile
+        run: npm run tsc

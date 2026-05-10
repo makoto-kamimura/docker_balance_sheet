@@ -20,11 +20,13 @@
   "include": [
     "App.tsx",
     "main.tsx",
+    "vite-env.d.ts",
     "api",
     "components",
     "hooks",
     "pages",
     "stores",
+    "tests",
     "types",
     "utils"
   ]

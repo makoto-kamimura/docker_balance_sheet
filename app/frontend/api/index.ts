@@ -75,6 +75,18 @@ export const authApi = {
 
   me: () =>
     request<User>('/auth/me'),
+
+  forgotPassword: (email: string) =>
+    request<{ message: string }>('/auth/password/forgot', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+
+  resetPassword: (payload: { token: string; email: string; password: string; password_confirmation: string }) =>
+    request<{ message: string }>('/auth/password/reset', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
 };
 
 // ─── 資産 ────────────────────────────────────────────
@@ -241,7 +253,27 @@ export const exportApi = {
   assets:        () => downloadCsv('/assets/export',         `assets-${stamp()}.csv`),
   liabilities:   () => downloadCsv('/liabilities/export',    `liabilities-${stamp()}.csv`),
   cashflowItems: () => downloadCsv('/cashflow-items/export', `cashflow-${stamp()}.csv`),
+  balanceSheetPdf: () =>
+    downloadBlob('/balance-sheet/export', `balance-sheet-${stamp()}.pdf`, 'application/pdf'),
 };
+
+async function downloadBlob(path: string, filename: string, accept: string): Promise<void> {
+  const token = localStorage.getItem('token');
+  const res = await fetch(`${BASE_URL}${path}`, {
+    headers: {
+      Accept: accept,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+  if (!res.ok) throw new Error('ダウンロードに失敗しました。');
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 function stamp(): string {
   const d = new Date();

@@ -1,4 +1,7 @@
+import { useState } from 'react';
 import { useBalanceSheet } from '../hooks';
+import { exportApi } from '../api';
+import { toast } from '../stores/toastStore';
 import { formatJPY } from '../utils/format';
 
 const ASSET_SECTION_KEYS = ['current', 'fixed', 'investment'] as const;
@@ -6,6 +9,7 @@ const LIABILITY_SECTION_KEYS = ['current', 'longterm'] as const;
 
 export default function BalanceSheetPage() {
   const { balanceSheet, loading } = useBalanceSheet();
+  const [downloading, setDownloading] = useState(false);
 
   if (loading) return <div className="page-loading">読み込み中...</div>;
   if (!balanceSheet) return null;
@@ -13,10 +17,25 @@ export default function BalanceSheetPage() {
   const { assets, liabilities, net_worth, recorded_at } = balanceSheet;
   const netPositive = net_worth >= 0;
 
+  const handleExportPdf = async () => {
+    setDownloading(true);
+    try {
+      await exportApi.balanceSheetPdf();
+      toast.success('PDF をダウンロードしました');
+    } catch (e: any) {
+      toast.error(e.message ?? 'PDF 出力に失敗しました');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   return (
     <div className="page">
       <div className="page-header">
         <h1 className="page-title">バランスシート</h1>
+        <button className="btn-secondary" onClick={handleExportPdf} disabled={downloading}>
+          {downloading ? 'PDF 出力中…' : 'PDF 出力'}
+        </button>
       </div>
 
       <div className="bs-grid">

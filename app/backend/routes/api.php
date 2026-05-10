@@ -10,21 +10,28 @@ use App\Http\Controllers\Api\CashflowItemController;
 use App\Http\Controllers\Api\BudgetController;
 use App\Http\Controllers\Api\CsvExportController;
 use App\Http\Controllers\Api\ExpenseController;
+use App\Http\Controllers\Api\PasswordResetController;
+use App\Http\Controllers\Api\PdfExportController;
 
 /*
 |--------------------------------------------------------------------------
 | API Routes
 |--------------------------------------------------------------------------
+| Rate Limit:
+| - login / register / password reset:        5  req / 1 min / IP
+| - 認証付き全般:                              60 req / 1 min / user
 */
 
-// 認証不要ルート
-Route::prefix('auth')->group(function () {
-    Route::post('/register', [AuthController::class, 'register']);
-    Route::post('/login',    [AuthController::class, 'login']);
+// 認証不要ルート（IP ベースの厳しいスロットル）
+Route::prefix('auth')->middleware('throttle:5,1')->group(function () {
+    Route::post('/register',                 [AuthController::class,          'register']);
+    Route::post('/login',                    [AuthController::class,          'login']);
+    Route::post('/password/forgot',          [PasswordResetController::class, 'forgot']);   // メールでリセットリンク送信
+    Route::post('/password/reset',           [PasswordResetController::class, 'reset']);    // 新パスワード適用
 });
 
-// 認証必要ルート（Laravel Sanctum）
-Route::middleware('auth:sanctum')->group(function () {
+// 認証必要ルート（Laravel Sanctum + ユーザ単位 60 req/min）
+Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
 
     // 認証
     Route::post('/auth/logout', [AuthController::class, 'logout']);
@@ -34,6 +41,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/assets/export',         [CsvExportController::class, 'assets']);
     Route::get('/liabilities/export',    [CsvExportController::class, 'liabilities']);
     Route::get('/cashflow-items/export', [CsvExportController::class, 'cashflowItems']);
+
+    // PDF エクスポート（B/S レポート全体）
+    Route::get('/balance-sheet/export', [PdfExportController::class, 'balanceSheet']);
 
     // 並び順更新（apiResource より前）
     Route::post('/assets/reorder',         [AssetController::class,        'reorder']);

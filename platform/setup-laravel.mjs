@@ -53,6 +53,39 @@ if (existsSync(resolve(backendSrc, 'database/seeders'))) {
   );
 }
 
+// database/factories/ をコピー（テスト用）
+if (existsSync(resolve(backendSrc, 'database/factories'))) {
+  console.log('  database/factories/ をコピー');
+  mkdirSync(resolve(laravelDir, 'database/factories'), { recursive: true });
+  cpSync(
+    resolve(backendSrc, 'database/factories'),
+    resolve(laravelDir, 'database/factories'),
+    { recursive: true, force: true },
+  );
+}
+
+// tests/ をコピー（PHPUnit）
+if (existsSync(resolve(backendSrc, 'tests'))) {
+  console.log('  tests/ をコピー');
+  mkdirSync(resolve(laravelDir, 'tests'), { recursive: true });
+  cpSync(
+    resolve(backendSrc, 'tests'),
+    resolve(laravelDir, 'tests'),
+    { recursive: true, force: true },
+  );
+}
+
+// resources/views/ をコピー（PDF Blade テンプレート用）
+if (existsSync(resolve(backendSrc, 'resources/views'))) {
+  console.log('  resources/views/ をコピー');
+  mkdirSync(resolve(laravelDir, 'resources/views'), { recursive: true });
+  cpSync(
+    resolve(backendSrc, 'resources/views'),
+    resolve(laravelDir, 'resources/views'),
+    { recursive: true, force: true },
+  );
+}
+
 // routes/api.php
 console.log('  routes/api.php をコピー');
 mkdirSync(resolve(laravelDir, 'routes'), { recursive: true });
@@ -65,5 +98,7 @@ cpSync(
 console.log('\n✅ 配置完了');
 console.log('\n次のステップ:');
 console.log(`  1. cd ${laravelDir}`);
-console.log('  2. composer install');
-console.log('  3. php artisan migrate');
+console.log('  2. composer require barryvdh/laravel-dompdf:^3.0   # PDF エクスポート用');
+console.log('  3. composer install');
+console.log('  4. php artisan migrate');
+console.log('  5. php artisan test                                  # テスト実行');

@@ -12,18 +12,23 @@
       "resizeMode": "contain",
       "backgroundColor": "#0f172a"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "plugins": [
       [
         "expo-camera",
-        { "cameraPermission": "レシート撮影のためにカメラを使用します。" }
+        {
+          "cameraPermission": "レシート撮影のためにカメラを使用します。"
+        }
       ]
     ],
     "ios": {
       "bundleIdentifier": "com.example.balancesheet",
       "supportsTablet": true,
       "infoPlist": {
-        "NSCameraUsageDescription": "レシート撮影のためにカメラを使用します。"
+        "NSCameraUsageDescription": "レシート撮影のためにカメラを使用します。",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -32,10 +37,15 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0f172a"
       },
-      "permissions": ["android.permission.CAMERA"]
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "extra": {
-      "apiUrl": "http://localhost/api"
+      "eas": {
+        "projectId": "e45c49f6-d692-4b77-bd7d-833ca3c26549"
+      }
     }
   }
 }

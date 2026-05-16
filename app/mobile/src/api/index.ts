@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import { Platform } from 'react-native';
 import type {
   AgeProjection,
   Asset,
@@ -36,10 +37,13 @@ export interface CashflowItemPayload {
   url?: string | null;
 }
 
+const DEFAULT_API_URL =
+  Platform.OS === 'android' ? 'http://10.0.2.2/api' : 'http://localhost/api';
+
 const BASE_URL =
   process.env.EXPO_PUBLIC_API_URL ??
   (Constants.expoConfig?.extra as { apiUrl?: string } | undefined)?.apiUrl ??
-  'http://localhost/api';
+  DEFAULT_API_URL;
 
 async function getHeaders(): Promise<Record<string, string>> {
   const token = await AsyncStorage.getItem('token');

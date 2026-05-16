@@ -639,10 +639,12 @@ cp .env.example .env
 
 ```bash
 cd app/mobile
-npm run start:go                # = expo start
+npm run start:go                # = expo start --go
 ```
 
 QR コードがターミナルに表示される。実機の **Expo Go アプリ** で QR を読み取ると即座にアプリが起動する。
+
+> **`--go` フラグが必要な理由**: `expo-dev-client` を依存に含むプロジェクトでは、`expo start` 単独では自動的に Dev Client モードになる。シミュレータで `i` キーを押すと `No development build (...) for this project is installed` エラーになるため、Expo Go モードを強制する `--go` を付ける。実行中のセッション中に切り替えたい場合はターミナルで `s` キーを押す。
 
 | プラットフォーム | 起動方法 |
 |---|---|
@@ -662,28 +664,74 @@ QR コードがターミナルに表示される。実機の **Expo Go アプリ
 
 `expo-dev-client` を含む独自ビルドを EAS（Expo のクラウドビルドサービス）で生成し、実機 / シミュレータにインストールする。
 
+#### 6.4.1 Expo アカウント作成（初回のみ）
+
+ブラウザで <https://expo.dev/signup> にアクセスして無料アカウントを作成する。Email / Google / GitHub のいずれでも登録可能。
+
+> **重要**: GitHub / Google の OAuth で登録した場合、**Expo 側のパスワードは存在しない**。`eas login` でパスワードを聞かれても答えようがないので、後述の **アクセストークン認証** を使う。
+
+#### 6.4.2 EAS CLI インストール
+
+```bash
+npm install -g eas-cli
+# EACCES エラーが出る場合は sudo を付けるか、npm prefix を ~/.npm-global に変更
+eas --version                   # 動作確認
+```
+
+#### 6.4.3 認証（2 通り）
+
+**方式 A: パスワード認証**（Email + Password で登録した場合）
+
 ```bash
 cd app/mobile
-
-# EAS CLI セットアップ（初回のみ）
-npm install -g eas-cli
-eas login                       # Expo アカウントでログイン
-eas build:configure             # 既存の eas.json を検出して上書き確認
+eas login
+# → Username (or email): xxx
+# → Password: xxx
 ```
 
-#### iOS Dev Client ビルド
+**方式 B: アクセストークン認証**（GitHub / Google OAuth で登録した場合・推奨）
+
+1. ブラウザで <https://expo.dev/accounts/[account]/settings/access-tokens> を開く
+2. **Create token** → 名前を付けて発行 → 表示された文字列をコピー（**一度きり表示**）
+3. ターミナルに環境変数として設定:
 
 ```bash
-eas build --profile development --platform ios
-# → クラウドで .ipa 生成（10〜20 分）
-# → ビルド完了 URL が表示される
-# → 実機: TestFlight 経由 または 内部配布リンクから直接インストール
-# → Simulator: ビルド成果物が .tar.gz の場合は展開して `xcrun simctl install booted *.app`
+# 一時的に使うだけなら export
+export EXPO_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+# 恒久化したい場合は ~/.zshrc 末尾に追記
+echo 'export EXPO_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' >> ~/.zshrc
+source ~/.zshrc
+
+eas whoami                      # 認証確認（アカウント名が表示されれば成功）
 ```
 
-iOS 実機で動かす場合は Apple Developer Program 加入と App ID / Bundle ID 登録が必要。EAS が証明書とプロビジョニングプロファイルを自動管理する。
+> `EXPO_TOKEN` が設定されている場合は `eas login` 不要。すべての `eas` コマンドが自動でトークン認証される。
 
-#### Android Dev Client ビルド
+#### 6.4.4 iOS Simulator 向け Dev Client ビルド（Apple Developer 不要）
+
+`eas.json` の development プロファイルに `"ios": { "simulator": true }` が入っていることを確認（[../app/mobile/eas.json](../app/mobile/eas.json)）。
+
+```bash
+cd app/mobile
+eas build --profile development --platform ios
+# 初回は project ID 自動生成の確認 → y
+# → クラウドで Simulator 向け .tar.gz 生成（10〜20 分）
+# → 完了後、CLI が "Install and run the new build on an iOS simulator?" と聞いてくる → y
+# → 自動で展開・インストール・起動まで実行される
+```
+
+#### 6.4.5 iOS 実機向け Dev Client ビルド
+
+Apple Developer Program 加入（$99/年）と App ID / Bundle ID 登録が必要。EAS が証明書とプロビジョニングプロファイルを自動管理する。
+
+```bash
+# eas.json の development プロファイルから "ios.simulator": true を一時的に削除してから実行
+eas build --profile development --platform ios
+# → クラウドで .ipa 生成（10〜20 分）
+# → 内部配布リンクから実機にインストール（または TestFlight 経由）
+```
+
+#### 6.4.6 Android Dev Client ビルド
 
 ```bash
 eas build --profile development --platform android
@@ -763,6 +811,9 @@ echo 'EXPO_PUBLIC_API_URL=http://192.168.1.10/api' > .env
 | OCR ボタンが反応しない / クラッシュ | Expo Go で起動している | Dev Client をビルドして使う（6.4） |
 | カメラ画面が真っ黒 | カメラ権限が未許可 | iOS: 設定 → アプリ名 → カメラ ON / Android: 設定 → アプリ → 権限 → カメラ ON |
 | Dev Client が「No development build installed」 | ビルドが端末にない / Bundle ID 不一致 | `eas build --profile development --platform <ios|android>` で再ビルドして再インストール |
+| `npm run start:go` 後 `i` キーで同じ「No development build」エラー | `expo-dev-client` 依存があると `expo start` は Dev Client モード優先になる | `package.json` の `start:go` を `expo start --go` に変更（[6.3](#63-モック起動expo-go-ui-確認用)）、または起動中に `s` キーで Expo Go モードに切り替え |
+| `a` キー押下時に「No Android connected device found」 | Android Emulator / 実機が未起動 | Android Studio で AVD を起動してから `a`、または iOS Simulator (`i`) / 実機 + QR に切り替え |
+| `eas login` でパスワードが分からない | GitHub / Google OAuth で Expo アカウント登録すると Expo 側パスワード未設定 | アクセストークン認証に切り替え（[6.4.3](#643-認証2-通り) 方式 B）。`https://expo.dev/accounts/[account]/settings/access-tokens` で発行し `export EXPO_TOKEN=...` |
 | 「Unable to resolve module」 | 新規依存追加後にキャッシュ不整合 | `npx expo start --clear` で Metro キャッシュ破棄 |
 | 起動後すぐログアウト状態に戻る | `AsyncStorage` の token が消えている / 期限切れ | 再ログインで OK。常に再現するなら `authApi.me()` のレスポンスを確認 |
 | TS エラー `Property 'refreshing' does not exist on ScrollView` | `FlatList` のプロパティを誤用 | `refreshControl={<RefreshControl ... />}` に書き換え |
